@@ -5,7 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Painel de Orquestração — Scrum</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
+/* ─── RESET & TOKENS ─── */
 *{box-sizing:border-box;margin:0;padding:0;}
 :root{
   --bg:#ffffff;--bg2:#f5f5f3;--bg3:#eeede9;
@@ -16,24 +18,41 @@
   --green:#3B6D11;--green-l:#EAF3DE;
   --amber:#854F0B;--amber-l:#FAEEDA;
   --red:#A32D2D;--red-l:#FCEBEB;
-  --blue:#185FA5;--blue-l:#E6F1FB;
   --teal:#0F6E56;--teal-l:#E1F5EE;
 }
-@media(prefers-color-scheme:dark){
-  :root{
-    --bg:#1e1e1e;--bg2:#272727;--bg3:#2f2f2f;
-    --text:#efefef;--text2:#aaa;--text3:#666;
-    --border:rgba(255,255,255,0.1);--border2:rgba(255,255,255,0.2);
-  }
-}
+@media(prefers-color-scheme:dark){:root{
+  --bg:#1e1e1e;--bg2:#272727;--bg3:#2f2f2f;
+  --text:#efefef;--text2:#aaa;--text3:#666;
+  --border:rgba(255,255,255,0.1);--border2:rgba(255,255,255,0.2);
+}}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg3);color:var(--text);min-height:100vh;font-size:14px;}
 .app{max-width:1200px;margin:0 auto;padding:20px 16px;}
 
-/* HEADER */
+/* ─── AUTH SCREEN ─── */
+#auth-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--bg3);}
+.auth-card{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-lg);padding:32px 28px;width:100%;max-width:380px;}
+.auth-logo{font-size:16px;font-weight:700;color:var(--purple);margin-bottom:6px;}
+.auth-subtitle{font-size:12px;color:var(--text2);margin-bottom:24px;}
+.auth-tabs{display:flex;gap:2px;border-bottom:1px solid var(--border);margin-bottom:20px;}
+.auth-tab{font-size:13px;font-weight:500;padding:7px 14px;cursor:pointer;color:var(--text2);border-bottom:2px solid transparent;margin-bottom:-1px;}
+.auth-tab.active{color:var(--text);border-bottom-color:var(--purple);}
+.auth-field{margin-bottom:12px;}
+.auth-field label{font-size:11px;color:var(--text2);display:block;margin-bottom:3px;font-weight:500;}
+.auth-field input{width:100%;padding:8px 10px;font-size:13px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--bg2);color:var(--text);outline:none;font-family:inherit;}
+.auth-field input:focus{border-color:var(--purple);box-shadow:0 0 0 2px rgba(83,74,183,.14);}
+.auth-btn{width:100%;padding:9px;font-size:13px;font-weight:500;cursor:pointer;border-radius:var(--radius);border:none;background:var(--purple);color:#fff;margin-top:4px;transition:background .15s;}
+.auth-btn:hover{background:var(--purple-d);}
+.auth-btn:disabled{background:#aaa;cursor:not-allowed;}
+.auth-err{font-size:11px;color:var(--red);margin-top:8px;min-height:16px;}
+.auth-ok{font-size:11px;color:var(--green);margin-top:8px;min-height:16px;}
+#main-app{display:none;}
+
+/* ─── HEADER ─── */
 .header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px;}
 .header-left h1{font-size:17px;font-weight:600;}
 .header-left .saved{font-size:11px;color:var(--text3);margin-top:2px;}
-.header-actions{display:flex;gap:7px;flex-wrap:wrap;}
+.header-actions{display:flex;gap:7px;flex-wrap:wrap;align-items:center;}
+.user-pill{font-size:11px;color:var(--text2);background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:3px 10px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .btn{font-size:12px;padding:6px 13px;cursor:pointer;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg);color:var(--text);transition:background .15s;}
 .btn:hover{background:var(--bg2);}
 .btn-primary{background:var(--purple);color:#fff;border-color:var(--purple);}
@@ -41,7 +60,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .btn-danger{background:var(--red-l);color:var(--red);border-color:#F09595;}
 .btn-danger:hover{background:#F7C1C1;}
 
-/* TABS */
+/* ─── TABS ─── */
 .tabs{display:flex;gap:2px;border-bottom:1px solid var(--border);margin-bottom:18px;}
 .tab{font-size:13px;font-weight:500;padding:8px 16px;cursor:pointer;color:var(--text2);border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .15s;}
 .tab.active{color:var(--text);border-bottom-color:var(--purple);}
@@ -49,7 +68,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .view{display:none;}
 .view.active{display:block;}
 
-/* KANBAN BOARD */
+/* ─── KANBAN ─── */
 .kb-toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;}
 .pills{display:flex;gap:6px;flex-wrap:wrap;}
 .pill{font-size:11px;padding:3px 10px;border-radius:20px;border:1px solid var(--border);background:var(--bg2);color:var(--text2);}
@@ -59,22 +78,22 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 @media(max-width:480px){.board{grid-template-columns:1fr;}}
 .col{background:var(--bg2);border-radius:var(--radius-lg);padding:10px;min-height:200px;}
 .col-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
-.col-title{font-size:12px;font-weight:600;color:var(--text);}
+.col-title{font-size:12px;font-weight:600;}
 .col-badge{font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;}
 .col.drag-over{outline:2px dashed var(--purple);outline-offset:-3px;}
 
-/* CARD */
+/* ─── CARD ─── */
 .card{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:8px;overflow:hidden;transition:border-color .15s;}
 .card:hover{border-color:var(--border2);}
-.card.dragging{opacity:0.45;}
+.card.dragging{opacity:.45;}
 .card-head{padding:9px 10px;cursor:pointer;}
-.card-type-row{display:flex;align-items:center;gap:5px;margin-bottom:5px;}
+.card-type-row{display:flex;align-items:center;gap:5px;margin-bottom:4px;}
 .type-badge{font-size:9px;font-weight:700;padding:1px 6px;border-radius:3px;letter-spacing:.03em;text-transform:uppercase;}
-.type-epic{background:#EEEDFE;color:#3C3489;}
+.type-epic{background:var(--purple-l);color:#3C3489;}
 .type-story{background:var(--teal-l);color:var(--teal);}
 .type-task{background:var(--bg2);color:var(--text2);border:1px solid var(--border);}
-.card-title{font-size:12px;font-weight:500;color:var(--text);line-height:1.35;margin-bottom:6px;}
-.card-meta{display:flex;align-items:center;justify-content:space-between;gap:4px;}
+.card-title{font-size:12px;font-weight:500;color:var(--text);line-height:1.35;margin-bottom:5px;}
+.card-meta{display:flex;align-items:center;justify-content:space-between;gap:4px;margin-top:3px;}
 .risk{font-size:10px;font-weight:600;padding:1px 6px;border-radius:20px;}
 .rl{background:var(--green-l);color:var(--green);}
 .rm{background:var(--amber-l);color:var(--amber);}
@@ -84,15 +103,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .due-sn{color:var(--amber);font-weight:500;}
 .tag{font-size:10px;padding:1px 6px;border-radius:20px;background:var(--purple-l);color:#3C3489;}
 .owner-txt{font-size:10px;color:var(--text2);}
-
-/* PROGRESS BAR */
 .prog-wrap{padding:0 10px 8px;}
 .prog-label{display:flex;justify-content:space-between;font-size:10px;color:var(--text2);margin-bottom:3px;}
 .prog-bar{height:4px;background:var(--bg3);border-radius:2px;overflow:hidden;}
 .prog-fill{height:100%;border-radius:2px;background:var(--purple);transition:width .3s;}
 .prog-fill.full{background:var(--green);}
 
-/* EXPANDED CARD */
+/* ─── EXPANDED ─── */
 .card-expanded{border-top:1px solid var(--border);padding:8px 10px;background:var(--bg2);}
 .expand-section-title{font-size:10px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;margin-top:8px;}
 .expand-section-title:first-child{margin-top:0;}
@@ -109,16 +126,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .subtask-row:last-child{border-bottom:none;}
 .sub-check{width:13px;height:13px;border-radius:3px;border:1.5px solid var(--border2);cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
 .sub-check.done{background:var(--purple);border-color:var(--purple);}
-.sub-check.done::after{content:'✓';color:#fff;font-size:8px;font-weight:700;line-height:1;}
-.sub-title{font-size:11px;color:var(--text);flex:1;line-height:1.3;}
+.sub-check.done::after{content:'✓';color:#fff;font-size:8px;font-weight:700;}
+.sub-title{font-size:11px;color:var(--text);flex:1;}
 .sub-title.done-txt{text-decoration:line-through;color:var(--text3);}
-.sub-assignee{font-size:10px;color:var(--text2);flex-shrink:0;}
-.story-actions{display:flex;gap:5px;padding:0 8px 7px 27px;}
-.link-btn{font-size:11px;color:var(--purple);cursor:pointer;background:none;border:none;padding:0;text-decoration:underline;}
-.link-btn:hover{color:var(--purple-d);}
+.sub-assignee{font-size:10px;color:var(--text2);}
 .expand-actions{display:flex;gap:6px;margin-top:8px;}
 
-/* BACKLOG TAB */
+/* ─── BACKLOG ─── */
 .bl-toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;}
 .bl-search{font-size:12px;padding:6px 10px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg2);color:var(--text);width:220px;outline:none;}
 .bl-search:focus{border-color:var(--purple);}
@@ -133,16 +147,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .bl-name{flex:1;}
 .bl-name-title{font-size:12px;font-weight:500;color:var(--text);}
 .bl-name-meta{font-size:10px;color:var(--text2);margin-top:2px;}
-.bl-actions{display:flex;gap:6px;flex-shrink:0;}
 .bl-detail{display:none;padding:8px 12px 12px 32px;border-top:1px solid var(--border);background:var(--bg2);}
 .bl-detail.open{display:block;}
-.bl-stories{margin-top:6px;}
 .bl-story-row{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);}
 .bl-story-row:last-child{border-bottom:none;}
 .bl-story-title{font-size:11px;color:var(--text);flex:1;}
 .bl-story-prog{font-size:10px;color:var(--text2);}
 
-/* DASHBOARD */
+/* ─── DASHBOARD ─── */
 .metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:18px;}
 @media(max-width:600px){.metrics{grid-template-columns:repeat(2,1fr);}}
 .metric{background:var(--bg2);border-radius:var(--radius);padding:14px;}
@@ -166,7 +178,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .mini-fill.full{background:var(--green);}
 .pct-txt{font-size:11px;font-weight:500;color:var(--text);min-width:32px;text-align:right;}
 
-/* MODAL */
+/* ─── MODAL ─── */
 .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.48);z-index:100;align-items:flex-start;justify-content:center;padding:24px 16px;overflow-y:auto;}
 .overlay.open{display:flex;}
 .modal{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-lg);padding:22px;width:100%;max-width:480px;margin:auto;}
@@ -179,39 +191,74 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
 .modal-actions{display:flex;gap:7px;margin-top:16px;}
 .modal-actions .btn{flex:1;text-align:center;}
-
-/* story/subtask editors inside modal */
+.section-sep{border:none;border-top:1px solid var(--border);margin:14px 0;}
 .m-stories{margin-top:6px;}
 .m-story-item{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:8px;margin-bottom:8px;}
 .m-story-head{display:flex;gap:6px;align-items:flex-start;margin-bottom:6px;}
 .m-story-head input{flex:1;font-size:12px;}
-.m-story-head button{flex-shrink:0;font-size:11px;padding:4px 8px;}
 .m-subtasks{padding-left:10px;}
 .m-subtask-row{display:flex;gap:6px;align-items:center;margin-bottom:5px;}
 .m-subtask-row input{flex:1;font-size:11px;}
-.m-subtask-row input.sub-assignee-inp{width:80px;flex:0 0 80px;}
-.m-subtask-row button{font-size:11px;padding:2px 7px;flex-shrink:0;}
+.m-subtask-row input.sub-ai{width:80px;flex:0 0 80px;}
 .add-link{font-size:11px;color:var(--purple);cursor:pointer;background:none;border:none;padding:2px 0;text-decoration:underline;display:inline-block;margin-top:4px;}
 .add-link:hover{color:var(--purple-d);}
-.section-sep{border:none;border-top:1px solid var(--border);margin:14px 0;}
 
-/* TOAST */
-.toast{position:fixed;bottom:22px;right:22px;background:var(--purple);color:#fff;font-size:12px;padding:9px 16px;border-radius:var(--radius);z-index:200;opacity:0;transition:opacity .3s;pointer-events:none;}
+/* ─── LOADING ─── */
+#loading-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--bg3);flex-direction:column;gap:10px;}
+.spinner{width:28px;height:28px;border:3px solid var(--border);border-top-color:var(--purple);border-radius:50%;animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.loading-txt{font-size:13px;color:var(--text2);}
+
+/* ─── TOAST ─── */
+.toast{position:fixed;bottom:22px;right:22px;background:var(--purple);color:#fff;font-size:12px;padding:9px 16px;border-radius:var(--radius);z-index:300;opacity:0;transition:opacity .3s;pointer-events:none;}
 .toast.show{opacity:1;}
+.toast.error{background:var(--red);}
 </style>
 </head>
 <body>
-<div class="app">
 
+<div id="loading-screen">
+  <div class="spinner"></div>
+  <div class="loading-txt">Conectando...</div>
+</div>
+
+<div id="auth-screen" style="display:none;">
+  <div class="auth-card">
+    <div class="auth-logo">Painel de Orquestração</div>
+    <div class="auth-subtitle">Acesse sua conta para continuar</div>
+    <div class="auth-tabs">
+      <div class="auth-tab active" onclick="switchAuthTab('login',this)">Entrar</div>
+      <div class="auth-tab" onclick="switchAuthTab('signup',this)">Criar conta</div>
+    </div>
+    <div id="auth-login">
+      <div class="auth-field"><label>E-mail</label><input id="login-email" type="email" placeholder="seu@email.com"/></div>
+      <div class="auth-field"><label>Senha</label><input id="login-pass" type="password" placeholder="••••••••"/></div>
+      <button class="auth-btn" id="btn-login" onclick="doLogin()">Entrar</button>
+      <div class="auth-err" id="login-err"></div>
+    </div>
+    <div id="auth-signup" style="display:none;">
+      <div class="auth-field"><label>E-mail</label><input id="signup-email" type="email" placeholder="seu@email.com"/></div>
+      <div class="auth-field"><label>Senha (mínimo 6 caracteres)</label><input id="signup-pass" type="password" placeholder="••••••••"/></div>
+      <button class="auth-btn" id="btn-signup" onclick="doSignup()">Criar conta</button>
+      <div class="auth-err" id="signup-err"></div>
+      <div class="auth-ok" id="signup-ok"></div>
+    </div>
+  </div>
+</div>
+
+<div id="main-app">
+<div class="app">
   <div class="header">
     <div class="header-left">
       <h1>Painel de Orquestração</h1>
-      <div class="saved" id="saved-lbl">dados salvos automaticamente</div>
+      <div class="saved" id="saved-lbl">sincronizado com Supabase</div>
     </div>
     <div class="header-actions">
+      <span class="user-pill" id="user-pill"></span>
       <button class="btn" onclick="exportData()">↓ Exportar JSON</button>
       <label class="btn" style="cursor:pointer;">↑ Importar JSON<input type="file" accept=".json" style="display:none;" onchange="importData(event)"/></label>
       <button class="btn btn-primary" onclick="openNew()">+ Novo projeto</button>
+      <button class="btn" onclick="doLogout()">Sair</button>
     </div>
   </div>
 
@@ -246,53 +293,26 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   <div class="view" id="view-dash">
     <div class="metrics" id="metrics"></div>
     <div class="dash-section-title">Progresso por projeto (subtarefas concluídas)</div>
-    <div class="chart-card" style="margin-bottom:18px;">
-      <div id="prog-table-wrap"></div>
-    </div>
+    <div class="chart-card" style="margin-bottom:18px;"><div id="prog-table-wrap"></div></div>
     <div class="charts-grid">
-      <div class="chart-card">
-        <div class="chart-title">Projetos por status</div>
-        <div class="legend" id="leg-status"></div>
-        <div style="position:relative;height:190px;"><canvas id="chart-status" role="img" aria-label="Projetos por status"></canvas></div>
-      </div>
-      <div class="chart-card">
-        <div class="chart-title">Projetos por risco</div>
-        <div class="legend" id="leg-risk"></div>
-        <div style="position:relative;height:190px;"><canvas id="chart-risk" role="img" aria-label="Projetos por nível de risco"></canvas></div>
-      </div>
-      <div class="chart-card">
-        <div class="chart-title">Distribuição por área</div>
-        <div class="legend" id="leg-area"></div>
-        <div style="position:relative;height:190px;"><canvas id="chart-area" role="img" aria-label="Projetos por área"></canvas></div>
-      </div>
-      <div class="chart-card">
-        <div class="chart-title">Entregas próximas 30 dias</div>
-        <div class="legend" id="leg-due"></div>
-        <div style="position:relative;height:190px;"><canvas id="chart-due" role="img" aria-label="Entregas por semana"></canvas></div>
-      </div>
+      <div class="chart-card"><div class="chart-title">Projetos por status</div><div class="legend" id="leg-status"></div><div style="position:relative;height:190px;"><canvas id="chart-status" role="img" aria-label="Projetos por status"></canvas></div></div>
+      <div class="chart-card"><div class="chart-title">Projetos por risco</div><div class="legend" id="leg-risk"></div><div style="position:relative;height:190px;"><canvas id="chart-risk" role="img" aria-label="Projetos por risco"></canvas></div></div>
+      <div class="chart-card"><div class="chart-title">Distribuição por área</div><div class="legend" id="leg-area"></div><div style="position:relative;height:190px;"><canvas id="chart-area" role="img" aria-label="Projetos por área"></canvas></div></div>
+      <div class="chart-card"><div class="chart-title">Entregas próximas 30 dias</div><div class="legend" id="leg-due"></div><div style="position:relative;height:190px;"><canvas id="chart-due" role="img" aria-label="Entregas por semana"></canvas></div></div>
     </div>
   </div>
 </div>
+</div>
 
-<!-- MODAL -->
 <div class="overlay" id="overlay" onclick="overlayClickOuter(event)">
 <div class="modal" id="modal">
   <h3 id="modal-title">Novo projeto</h3>
   <div class="field-row">
     <div class="field"><label>Tipo</label>
-      <select id="e-type">
-        <option value="epic">Epic</option>
-        <option value="story">História</option>
-        <option value="task">Tarefa</option>
-      </select>
+      <select id="e-type"><option value="epic">Epic</option><option value="story">História</option><option value="task">Tarefa</option></select>
     </div>
     <div class="field"><label>Status / Coluna</label>
-      <select id="e-col">
-        <option value="backlog">Backlog</option>
-        <option value="doing">Em andamento</option>
-        <option value="review">Em revisão</option>
-        <option value="done">Concluído</option>
-      </select>
+      <select id="e-col"><option value="backlog">Backlog</option><option value="doing">Em andamento</option><option value="review">Em revisão</option><option value="done">Concluído</option></select>
     </div>
   </div>
   <div class="field"><label>Nome *</label><input id="e-name" type="text" placeholder="Ex: Implantação ERP"/></div>
@@ -303,26 +323,20 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   <div class="field-row">
     <div class="field"><label>Prazo</label><input id="e-due" type="date"/></div>
     <div class="field"><label>Risco</label>
-      <select id="e-risk">
-        <option value="low">Baixo</option>
-        <option value="mid">Médio</option>
-        <option value="high">Alto</option>
-      </select>
+      <select id="e-risk"><option value="low">Baixo</option><option value="mid">Médio</option><option value="high">Alto</option></select>
     </div>
   </div>
   <div class="field"><label>Observações / Bloqueios</label><textarea id="e-notes" placeholder="Notas, dependências, contexto..."></textarea></div>
-
   <hr class="section-sep"/>
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
     <span style="font-size:12px;font-weight:600;color:var(--text);">Histórias e subtarefas</span>
     <button class="add-link" onclick="addStory()">+ Adicionar história</button>
   </div>
   <div class="m-stories" id="m-stories"></div>
-
   <div class="modal-actions">
     <button class="btn btn-danger" id="btn-del" onclick="deleteCard()" style="display:none;">Excluir</button>
     <button class="btn" onclick="closeModal()">Cancelar</button>
-    <button class="btn btn-primary" onclick="saveCard()">Salvar</button>
+    <button class="btn btn-primary" id="btn-save" onclick="saveCard()">Salvar</button>
   </div>
 </div>
 </div>
@@ -330,496 +344,647 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 <div class="toast" id="toast"></div>
 
 <script>
-const STORAGE_KEY = 'orq_scrum_v2';
-const TODAY = new Date(); TODAY.setHours(0,0,0,0);
+/* ════════════════════════════════════════
+   SUPABASE CONFIG
+════════════════════════════════════════ */
+const SUPABASE_URL = 'https://awzbbyxptcimtycqxrjm.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_dgVO4rCx_k6RJwF3gAzXYg_ogyylGXq';
+const TABLE        = 'projects';
 
+const { createClient } = supabase;
+const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+/* ════════════════════════════════════════
+   STATE
+════════════════════════════════════════ */
+const TODAY = new Date(); TODAY.setHours(0,0,0,0);
 const COLS = [
-  {id:'backlog', label:'Backlog',       bg:'#D3D1C7', tc:'#444441'},
-  {id:'doing',   label:'Em andamento',  bg:'#B5D4F4', tc:'#0C447C'},
-  {id:'review',  label:'Em revisão',    bg:'#FAC775', tc:'#633806'},
-  {id:'done',    label:'Concluído',     bg:'#C0DD97', tc:'#27500A'},
+  {id:'backlog', label:'Backlog',      bg:'#D3D1C7', tc:'#444441'},
+  {id:'doing',   label:'Em andamento', bg:'#B5D4F4', tc:'#0C447C'},
+  {id:'review',  label:'Em revisão',   bg:'#FAC775', tc:'#633806'},
+  {id:'done',    label:'Concluído',    bg:'#C0DD97', tc:'#27500A'},
 ];
 
-/* ── DEFAULT DATA ── */
-function mkSub(id,title,assignee,done){return{id,title,assignee:assignee||'',done:!!done};}
-function mkStory(id,title,subs){return{id,title,subtasks:subs||[]};}
-function mkCard(id,type,title,owner,tag,due,risk,col,notes,stories){
-  return{id,type,title,owner:owner||'—',tag:tag||'Geral',due,risk:risk||'low',col,notes:notes||'',stories:stories||[]};
-}
-const DEFAULT = {
-  backlog:[
-    mkCard(1,'epic','Implantação ERP módulo fiscal','Ricardo','TI','2026-05-10','mid','backlog','Aguardando escopo final.',[
-      mkStory(101,'Levantamento de requisitos',[mkSub(1001,'Entrevistar stakeholders','Ricardo',true),mkSub(1002,'Documentar processos atuais','Luiza',false)]),
-      mkStory(102,'Configuração do ambiente',[mkSub(1003,'Provisionar servidor','André',false),mkSub(1004,'Instalar dependências','André',false)]),
-    ]),
-    mkCard(2,'story','Reestruturação do onboarding','Camila','RH','2026-05-20','low','backlog','',[
-      mkStory(103,'Redesenho do fluxo',[mkSub(1005,'Mapear jornada atual','Camila',false),mkSub(1006,'Propor novo fluxo','Camila',false)]),
-    ]),
-    mkCard(3,'task','Revisão de contratos fornecedores','Luiza','Jurídico','2026-06-01','low','backlog','',[]),
-  ],
-  doing:[
-    mkCard(4,'epic','Migração de dados — nova plataforma','André','TI','2026-04-22','high','doing','Bloqueio: acesso ao ambiente de produção pendente.',[
-      mkStory(104,'Extração de dados legados',[mkSub(1007,'Exportar tabelas core','André',true),mkSub(1008,'Validar integridade','André',true)]),
-      mkStory(105,'Carga na nova plataforma',[mkSub(1009,'Executar scripts ETL','André',false),mkSub(1010,'Testes de regressão','Felipe',false)]),
-      mkStory(106,'Homologação',[mkSub(1011,'UAT com usuários-chave','Mariana',false),mkSub(1012,'Aprovar go-live','Ricardo',false)]),
-    ]),
-    mkCard(5,'story','Campanha de engajamento Q2','Mariana','Marketing','2026-04-28','mid','doing','',[
-      mkStory(107,'Planejamento',[mkSub(1013,'Definir canais','Mariana',true),mkSub(1014,'Criar calendário','Mariana',true)]),
-      mkStory(108,'Execução',[mkSub(1015,'Produzir conteúdo','Mariana',false),mkSub(1016,'Publicar posts','Mariana',false)]),
-    ]),
-    mkCard(6,'task','Auditoria interna financeira','Felipe','Financeiro','2026-04-18','high','doing','Prazo crítico.',[
-      mkStory(109,'Coleta de documentos',[mkSub(1017,'Solicitar extratos','Felipe',true),mkSub(1018,'Revisar notas fiscais','Felipe',false)]),
-    ]),
-  ],
-  review:[
-    mkCard(7,'story','Política de benefícios 2026','Beatriz','RH','2026-04-15','low','review','',[
-      mkStory(110,'Elaboração',[mkSub(1019,'Rascunho inicial','Beatriz',true),mkSub(1020,'Revisão jurídica','Luiza',true)]),
-    ]),
-    mkCard(8,'task','Relatório de desempenho Q1','Tiago','Gestão','2026-04-14','mid','review','',[
-      mkStory(111,'Compilação',[mkSub(1021,'Coletar métricas','Tiago',true),mkSub(1022,'Montar apresentação','Tiago',false)]),
-    ]),
-  ],
-  done:[
-    mkCard(9,'epic','Integração API pagamentos','Gabriel','TI','2026-04-05','low','done','Concluído sem pendências.',[
-      mkStory(112,'Desenvolvimento',[mkSub(1023,'Implementar endpoints','Gabriel',true),mkSub(1024,'Testes unitários','Gabriel',true)]),
-    ]),
-    mkCard(10,'task','Treinamento líderes de time','Sophia','RH','2026-04-08','low','done','',[
-      mkStory(113,'Preparação',[mkSub(1025,'Criar material','Sophia',true),mkSub(1026,'Agendar sessões','Sophia',true)]),
-    ]),
-  ],
-};
+let projectData    = {backlog:[],doing:[],review:[],done:[]};  // ← renomeado para evitar conflito com variável local
+let editId         = null;
+let isNew          = false;
+let blFilter       = 'all';
+let activeTab      = 'kanban';
+let dragId         = null;
+let charts         = {};
+let modalStories   = [];
+let expandedCards   = new Set();
+let expandedStories = new Set();
+let expandedBlRows  = new Set();
+let currentUser    = null;
 
-/* ── STATE ── */
-let data = loadData();
-let nextId = Math.max(...Object.values(data).flat().map(c=>c.id),20)+1;
-let nextStoryId = 200, nextSubId = 2000;
-function bumpIds(){
-  const all = Object.values(data).flat();
-  all.forEach(c=>{
-    nextId = Math.max(nextId, c.id+1);
-    (c.stories||[]).forEach(s=>{
-      nextStoryId = Math.max(nextStoryId, s.id+1);
-      (s.subtasks||[]).forEach(st=>{ nextSubId = Math.max(nextSubId, st.id+1); });
-    });
+/* ════════════════════════════════════════
+   BOOT
+════════════════════════════════════════ */
+async function boot() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (session?.user) {
+    currentUser = session.user;
+    await enterApp();
+  } else {
+    showScreen('auth');
+  }
+  sb.auth.onAuthStateChange(async (_event, session) => {
+    if (session?.user && !currentUser) {
+      currentUser = session.user;
+      await enterApp();
+    } else if (!session?.user && currentUser) {
+      currentUser = null;
+      projectData = {backlog:[],doing:[],review:[],done:[]};
+      showScreen('auth');
+    }
   });
 }
-bumpIds();
 
-let editId=null, isNew=false, blFilter='all', activeTab='kanban', dragId=null;
-let charts={};
-let expandedCards=new Set(), expandedStories=new Set(), expandedBlRows=new Set();
-
-/* ── PERSIST ── */
-function loadData(){
-  try{const s=localStorage.getItem(STORAGE_KEY);if(s)return JSON.parse(s);}catch(e){}
-  return JSON.parse(JSON.stringify(DEFAULT));
-}
-function saveData(){
-  try{
-    localStorage.setItem(STORAGE_KEY,JSON.stringify(data));
-    const t=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-    document.getElementById('saved-lbl').textContent='✓ salvo às '+t;
-  }catch(e){}
+function showScreen(name) {
+  document.getElementById('loading-screen').style.display = 'none';
+  document.getElementById('auth-screen').style.display   = name === 'auth' ? 'flex'  : 'none';
+  document.getElementById('main-app').style.display      = name === 'main' ? 'block' : 'none';
 }
 
-/* ── HELPERS ── */
-function allCards(){return Object.values(data).flat();}
-function findCard(id){for(const col of Object.keys(data)){const c=data[col].find(x=>x.id===id);if(c)return{card:c,col};}return null;}
-function dueInfo(due){
-  const d=new Date(due+'T00:00:00');const diff=Math.round((d-TODAY)/86400000);
-  if(diff<0)return{label:Math.abs(diff)+'d atrasado',cls:'due-ov'};
-  if(diff===0)return{label:'hoje',cls:'due-sn'};
-  if(diff<=5)return{label:diff+'d',cls:'due-sn'};
-  return{label:diff+'d',cls:''};
-}
-function riskCls(r){return{low:'rl',mid:'rm',high:'rh'}[r]||'rl';}
-function riskLbl(r){return{low:'Baixo',mid:'Médio',high:'Alto'}[r]||'';}
-function typeCls(t){return{epic:'type-epic',story:'type-story',task:'type-task'}[t]||'type-task';}
-function typeLbl(t){return{epic:'Epic',story:'História',task:'Tarefa'}[t]||t;}
-function escH(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
-function cardProgress(card){
-  let total=0,done=0;
-  (card.stories||[]).forEach(s=>{(s.subtasks||[]).forEach(st=>{total++;if(st.done)done++;});});
-  return{total,done,pct:total===0?0:Math.round(done/total*100)};
+async function enterApp() {
+  showScreen('loading');
+  document.getElementById('user-pill').textContent = currentUser.email;
+  await loadData();
+  showScreen('main');
+  renderAll();
 }
 
-/* ── KANBAN ── */
-function renderKanban(){
-  const board=document.getElementById('board');board.innerHTML='';
-  let active=0,highRisk=0;
-  COLS.forEach(col=>{
-    const cards=data[col.id]||[];
-    if(col.id!=='done'){active+=cards.length;highRisk+=cards.filter(c=>c.risk==='high').length;}
-    const colEl=document.createElement('div');colEl.className='col';colEl.dataset.col=col.id;
-    colEl.innerHTML=`<div class="col-hdr"><span class="col-title">${col.label}</span><span class="col-badge" style="background:${col.bg};color:${col.tc};">${cards.length}</span></div>`;
-    cards.forEach(card=>{
-      const di=dueInfo(card.due);
-      const prog=cardProgress(card);
-      const isExp=expandedCards.has(card.id);
-      const cardEl=document.createElement('div');cardEl.className='card'+(dragId===card.id?' dragging':'');
-      cardEl.draggable=true;cardEl.dataset.id=card.id;
+/* ════════════════════════════════════════
+   AUTH
+════════════════════════════════════════ */
+function switchAuthTab(tab, btn) {
+  document.querySelectorAll('.auth-tab').forEach(el => el.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('auth-login').style.display  = tab === 'login'  ? '' : 'none';
+  document.getElementById('auth-signup').style.display = tab === 'signup' ? '' : 'none';
+}
 
-      let progHtml='';
-      if(prog.total>0){
-        progHtml=`<div class="prog-wrap"><div class="prog-label"><span>${prog.done}/${prog.total} subtarefas</span><span>${prog.pct}%</span></div><div class="prog-bar"><div class="prog-fill${prog.pct===100?' full':''}" style="width:${prog.pct}%"></div></div></div>`;
-      }
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const pass  = document.getElementById('login-pass').value;
+  const errEl = document.getElementById('login-err');
+  const btn   = document.getElementById('btn-login');
+  errEl.textContent = '';
+  if (!email || !pass) { errEl.textContent = 'Preencha e-mail e senha.'; return; }
+  btn.disabled = true; btn.textContent = 'Entrando...';
+  const { error } = await sb.auth.signInWithPassword({ email, password: pass });
+  btn.disabled = false; btn.textContent = 'Entrar';
+  if (error) errEl.textContent = traduzErro(error.message);
+}
 
-      let expandedHtml='';
-      if(isExp){
-        let storiesHtml='';
-        (card.stories||[]).forEach(story=>{
-          const stExp=expandedStories.has(story.id);
-          const stTotal=story.subtasks.length, stDone=story.subtasks.filter(s=>s.done).length;
-          let subsHtml='';
-          story.subtasks.forEach(sub=>{
-            subsHtml+=`<div class="subtask-row">
-              <div class="sub-check${sub.done?' done':''}" onclick="toggleSub(${card.id},${story.id},${sub.id});event.stopPropagation();"></div>
+async function doSignup() {
+  const email = document.getElementById('signup-email').value.trim();
+  const pass  = document.getElementById('signup-pass').value;
+  const errEl = document.getElementById('signup-err');
+  const okEl  = document.getElementById('signup-ok');
+  const btn   = document.getElementById('btn-signup');
+  errEl.textContent = ''; okEl.textContent = '';
+  if (!email || !pass) { errEl.textContent = 'Preencha todos os campos.'; return; }
+  if (pass.length < 6) { errEl.textContent = 'Senha deve ter ao menos 6 caracteres.'; return; }
+  btn.disabled = true; btn.textContent = 'Criando...';
+  const { error } = await sb.auth.signUp({ email, password: pass });
+  btn.disabled = false; btn.textContent = 'Criar conta';
+  if (error) errEl.textContent = traduzErro(error.message);
+  else okEl.textContent = 'Conta criada! Verifique seu e-mail para confirmar.';
+}
+
+async function doLogout() {
+  await sb.auth.signOut();
+  projectData = {backlog:[],doing:[],review:[],done:[]};
+  currentUser = null;
+}
+
+function traduzErro(msg) {
+  if (msg.includes('Invalid login'))       return 'E-mail ou senha incorretos.';
+  if (msg.includes('Email not confirmed')) return 'Confirme seu e-mail antes de entrar.';
+  if (msg.includes('already registered')) return 'Este e-mail já está cadastrado.';
+  return msg;
+}
+
+/* ════════════════════════════════════════
+   SUPABASE DATA LAYER
+
+   IMPORTANTE — dados compartilhados:
+   A tabela NÃO filtra por user_id, então todos
+   os usuários autenticados veem e editam os
+   mesmos projetos. O RLS no Supabase deve
+   permitir SELECT/INSERT/UPDATE/DELETE para
+   qualquer usuário autenticado (authenticated role).
+
+   SQL para rodar no Supabase antes de usar:
+
+   create table if not exists projects (
+     id          uuid primary key default gen_random_uuid(),
+     user_id     uuid references auth.users(id) on delete set null,
+     payload     jsonb not null,
+     created_at  timestamptz default now(),
+     updated_at  timestamptz default now()
+   );
+
+   alter table projects enable row level security;
+
+   -- Política compartilhada: qualquer usuário autenticado lê e escreve tudo
+   create policy "shared_all"
+     on projects for all
+     to authenticated
+     using (true)
+     with check (true);
+════════════════════════════════════════ */
+async function loadData() {
+  const { data: rows, error } = await sb
+    .from(TABLE)
+    .select('*')
+    .order('created_at', { ascending: true });
+  // ↑ removido o filtro .eq('user_id', currentUser.id) para dados compartilhados
+
+  if (error) { toast('Erro ao carregar: ' + error.message, true); return; }
+
+  projectData = {backlog:[],doing:[],review:[],done:[]};
+  (rows || []).forEach(row => {
+    const card = { ...row.payload, _db_id: row.id };
+    const col  = card.col || 'backlog';
+    if (projectData[col]) projectData[col].push(card);
+  });
+}
+
+async function upsertCard(card) {
+  // FIX: usar nome diferente de 'data' para não conflitar com o estado global
+  const payload = { ...card };
+  delete payload._db_id;
+
+  if (card._db_id) {
+    const { error } = await sb
+      .from(TABLE)
+      .update({ payload, updated_at: new Date().toISOString() })
+      .eq('id', card._db_id);
+    if (error) { toast('Erro ao salvar: ' + error.message, true); return false; }
+  } else {
+    const { data: inserted, error } = await sb
+      .from(TABLE)
+      .insert({ user_id: currentUser.id, payload })
+      .select()
+      .single();
+    if (error) { toast('Erro ao criar: ' + error.message, true); return false; }
+    card._db_id = inserted.id;
+  }
+  setSavedLabel();
+  return true;
+}
+
+async function removeCard(card) {
+  if (!card._db_id) return true;
+  const { error } = await sb.from(TABLE).delete().eq('id', card._db_id);
+  if (error) { toast('Erro ao excluir: ' + error.message, true); return false; }
+  setSavedLabel();
+  return true;
+}
+
+function setSavedLabel() {
+  const t = new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  document.getElementById('saved-lbl').textContent = '✓ sincronizado às ' + t;
+}
+
+/* ════════════════════════════════════════
+   HELPERS
+════════════════════════════════════════ */
+function allCards()  { return Object.values(projectData).flat(); }
+function findCard(id) {
+  for (const col of Object.keys(projectData)) {
+    const c = projectData[col].find(x => x.id == id);  // == para aceitar number e string
+    if (c) return { card: c, col };
+  }
+  return null;
+}
+function dueInfo(due) {
+  const d    = new Date(due + 'T00:00:00');
+  const diff = Math.round((d - TODAY) / 86400000);
+  if (diff < 0) return { label: Math.abs(diff) + 'd atrasado', cls: 'due-ov' };
+  if (diff === 0) return { label: 'hoje', cls: 'due-sn' };
+  if (diff <= 5)  return { label: diff + 'd', cls: 'due-sn' };
+  return { label: diff + 'd', cls: '' };
+}
+function riskCls(r) { return {low:'rl',mid:'rm',high:'rh'}[r] || 'rl'; }
+function riskLbl(r) { return {low:'Baixo',mid:'Médio',high:'Alto'}[r] || ''; }
+function typeCls(t) { return {epic:'type-epic',story:'type-story',task:'type-task'}[t] || 'type-task'; }
+function typeLbl(t) { return {epic:'Epic',story:'História',task:'Tarefa'}[t] || t; }
+function escH(s)    { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function cardProgress(card) {
+  let total = 0, done = 0;
+  (card.stories||[]).forEach(s => (s.subtasks||[]).forEach(st => { total++; if (st.done) done++; }));
+  return { total, done, pct: total === 0 ? 0 : Math.round(done / total * 100) };
+}
+let _nid = Date.now();
+function uid() { return ++_nid; }
+
+/* ════════════════════════════════════════
+   KANBAN
+════════════════════════════════════════ */
+function renderKanban() {
+  const board = document.getElementById('board'); board.innerHTML = '';
+  let active = 0, highRisk = 0;
+  COLS.forEach(col => {
+    const cards = projectData[col.id] || [];
+    if (col.id !== 'done') { active += cards.length; highRisk += cards.filter(c => c.risk === 'high').length; }
+    const colEl = document.createElement('div');
+    colEl.className = 'col'; colEl.dataset.col = col.id;
+    colEl.innerHTML = `<div class="col-hdr"><span class="col-title">${col.label}</span><span class="col-badge" style="background:${col.bg};color:${col.tc};">${cards.length}</span></div>`;
+    cards.forEach(card => {
+      const di    = dueInfo(card.due);
+      const prog  = cardProgress(card);
+      const isExp = expandedCards.has(card.id);
+      const el    = document.createElement('div');
+      el.className = 'card'; el.draggable = true; el.dataset.id = card.id;
+
+      const progHtml = prog.total > 0
+        ? `<div class="prog-wrap"><div class="prog-label"><span>${prog.done}/${prog.total} subtarefas</span><span>${prog.pct}%</span></div><div class="prog-bar"><div class="prog-fill${prog.pct===100?' full':''}" style="width:${prog.pct}%"></div></div></div>`
+        : '';
+
+      let expHtml = '';
+      if (isExp) {
+        let storiesHtml = '';
+        (card.stories||[]).forEach(story => {
+          const stExp  = expandedStories.has(story.id);
+          const stDone = (story.subtasks||[]).filter(s => s.done).length;
+          const subsHtml = (story.subtasks||[]).map(sub =>
+            `<div class="subtask-row">
+              <div class="sub-check${sub.done?' done':''}" onclick="toggleSub('${card.id}',${story.id},${sub.id});event.stopPropagation();"></div>
               <span class="sub-title${sub.done?' done-txt':''}">${escH(sub.title)}</span>
               <span class="sub-assignee">${escH(sub.assignee)}</span>
-            </div>`;
-          });
-          storiesHtml+=`<div class="story-item">
+            </div>`).join('');
+          storiesHtml += `<div class="story-item">
             <div class="story-head" onclick="toggleStory(${story.id});event.stopPropagation();">
               <span class="story-expand-icon${stExp?' open':''}">▶</span>
               <span class="story-title">${escH(story.title)}</span>
-              <span class="story-prog">${stDone}/${stTotal}</span>
+              <span class="story-prog">${stDone}/${(story.subtasks||[]).length}</span>
             </div>
             <div class="subtasks${stExp?' open':''}">${subsHtml}</div>
           </div>`;
         });
-        expandedHtml=`<div class="card-expanded">
-          ${card.notes?`<div style="font-size:11px;color:var(--text2);margin-bottom:8px;font-style:italic;">${escH(card.notes)}</div>`:''}
-          ${card.stories.length>0?`<div class="expand-section-title">Histórias</div>${storiesHtml}`:'<div style="font-size:11px;color:var(--text3);padding-bottom:4px;">Sem histórias. Edite o card para adicionar.</div>'}
+        expHtml = `<div class="card-expanded">
+          ${card.notes ? `<div style="font-size:11px;color:var(--text2);margin-bottom:8px;font-style:italic;">${escH(card.notes)}</div>` : ''}
+          ${card.stories && card.stories.length > 0
+            ? `<div class="expand-section-title">Histórias</div>${storiesHtml}`
+            : '<div style="font-size:11px;color:var(--text3);padding-bottom:4px;">Sem histórias. Edite o card para adicionar.</div>'}
           <div class="expand-actions">
-            <button class="btn" style="font-size:11px;padding:4px 10px;" onclick="openEdit(${card.id});event.stopPropagation();">Editar card</button>
+            <button class="btn" style="font-size:11px;padding:4px 10px;" onclick="openEdit('${card.id}');event.stopPropagation();">Editar card</button>
           </div>
         </div>`;
       }
 
-      cardEl.innerHTML=`
-        <div class="card-head" onclick="toggleCardExpand(${card.id})">
+      el.innerHTML = `
+        <div class="card-head" onclick="toggleCardExpand('${card.id}')">
           <div class="card-type-row"><span class="type-badge ${typeCls(card.type)}">${typeLbl(card.type)}</span></div>
           <div class="card-title">${escH(card.title)}</div>
-          <div class="card-meta">
-            <span class="due ${di.cls}">${di.label}</span>
-            <span class="risk ${riskCls(card.risk)}">${riskLbl(card.risk)}</span>
-          </div>
-          <div class="card-meta" style="margin-top:4px;"><span class="tag">${escH(card.tag)}</span><span class="owner-txt">${escH(card.owner)}</span></div>
-        </div>
-        ${progHtml}
-        ${expandedHtml}`;
+          <div class="card-meta"><span class="due ${di.cls}">${di.label}</span><span class="risk ${riskCls(card.risk)}">${riskLbl(card.risk)}</span></div>
+          <div class="card-meta"><span class="tag">${escH(card.tag)}</span><span class="owner-txt">${escH(card.owner)}</span></div>
+        </div>${progHtml}${expHtml}`;
 
-      cardEl.addEventListener('dragstart',e=>{dragId=card.id;cardEl.classList.add('dragging');e.dataTransfer.effectAllowed='move';});
-      cardEl.addEventListener('dragend',()=>{dragId=null;cardEl.classList.remove('dragging');});
-      colEl.appendChild(cardEl);
+      el.addEventListener('dragstart', e => { dragId = card.id; el.classList.add('dragging'); e.dataTransfer.effectAllowed = 'move'; });
+      el.addEventListener('dragend',   () => { dragId = null; el.classList.remove('dragging'); });
+      colEl.appendChild(el);
     });
-    colEl.addEventListener('dragover',e=>{e.preventDefault();colEl.classList.add('drag-over');});
-    colEl.addEventListener('dragleave',()=>colEl.classList.remove('drag-over'));
-    colEl.addEventListener('drop',e=>{
-      e.preventDefault();colEl.classList.remove('drag-over');
-      if(dragId===null)return;
-      const r=findCard(dragId);if(!r||r.col===col.id)return;
-      const idx=data[r.col].findIndex(c=>c.id===dragId);
-      const[moved]=data[r.col].splice(idx,1);
-      data[col.id].push(moved);
-      dragId=null;saveData();renderAll();
+
+    colEl.addEventListener('dragover',  e => { e.preventDefault(); colEl.classList.add('drag-over'); });
+    colEl.addEventListener('dragleave', () => colEl.classList.remove('drag-over'));
+    colEl.addEventListener('drop', async e => {
+      e.preventDefault(); colEl.classList.remove('drag-over');
+      if (!dragId) return;
+      const r = findCard(dragId);
+      if (!r || r.col === col.id) return;
+      const idx = projectData[r.col].findIndex(c => c.id == dragId);
+      const [moved] = projectData[r.col].splice(idx, 1);
+      moved.col = col.id;
+      projectData[col.id].push(moved);
+      dragId = null;
+      renderAll();
+      await upsertCard(moved);
     });
     board.appendChild(colEl);
   });
-  const pills=document.getElementById('kb-pills');
-  pills.innerHTML=`<span class="pill">${active} ativos</span>${highRisk>0?`<span class="pill pill-danger">${highRisk} risco alto</span>`:''}<span class="pill">${(data.done||[]).length} concluídos</span>`;
+
+  const pills = document.getElementById('kb-pills');
+  pills.innerHTML = `<span class="pill">${active} ativos</span>${highRisk>0?`<span class="pill pill-danger">${highRisk} risco alto</span>`:''}<span class="pill">${(projectData.done||[]).length} concluídos</span>`;
 }
 
-function toggleCardExpand(id){
-  if(expandedCards.has(id))expandedCards.delete(id);else expandedCards.add(id);
+function toggleCardExpand(id) {
+  if (expandedCards.has(id)) expandedCards.delete(id); else expandedCards.add(id);
   renderKanban();
 }
-function toggleStory(id){
-  if(expandedStories.has(id))expandedStories.delete(id);else expandedStories.add(id);
+function toggleStory(id) {
+  if (expandedStories.has(id)) expandedStories.delete(id); else expandedStories.add(id);
   renderKanban();
 }
-function toggleSub(cardId,storyId,subId){
-  const r=findCard(cardId);if(!r)return;
-  const story=r.card.stories.find(s=>s.id===storyId);if(!story)return;
-  const sub=story.subtasks.find(s=>s.id===subId);if(!sub)return;
-  sub.done=!sub.done;
-  saveData();renderAll();
+async function toggleSub(cardId, storyId, subId) {
+  const r = findCard(cardId); if (!r) return;
+  const story = (r.card.stories||[]).find(s => s.id == storyId); if (!story) return;
+  const sub   = (story.subtasks||[]).find(s => s.id == subId);   if (!sub)   return;
+  sub.done = !sub.done;
+  renderAll();
+  await upsertCard(r.card);
 }
 
-/* ── BACKLOG ── */
-function renderBacklog(){
-  const q=(document.getElementById('bl-search').value||'').toLowerCase();
-  let all=allCards();
-  if(blFilter!=='all')all=all.filter(c=>c.col===blFilter);
-  if(q)all=all.filter(c=>c.title.toLowerCase().includes(q)||c.owner.toLowerCase().includes(q)||c.tag.toLowerCase().includes(q));
-  const list=document.getElementById('bl-list');list.innerHTML='';
-  if(all.length===0){list.innerHTML='<div style="font-size:12px;color:var(--text3);padding:16px 0;text-align:center;">Nenhum projeto encontrado.</div>';return;}
-  all.forEach(card=>{
-    const prog=cardProgress(card);
-    const di=dueInfo(card.due);
-    const isExp=expandedBlRows.has(card.id);
-    const row=document.createElement('div');row.className='bl-row';
-    let storiesHtml='';
-    (card.stories||[]).forEach(story=>{
-      const stDone=story.subtasks.filter(s=>s.done).length;
-      storiesHtml+=`<div class="bl-story-row">
-        <span class="type-badge type-story" style="font-size:9px;">História</span>
-        <span class="bl-story-title">${escH(story.title)}</span>
-        <span class="bl-story-prog">${stDone}/${story.subtasks.length}</span>
-      </div>`;
-    });
-    const colLabel=COLS.find(c=>c.id===card.col)?.label||card.col;
-    row.innerHTML=`
-      <div class="bl-row-head" onclick="toggleBlRow(${card.id})">
+/* ════════════════════════════════════════
+   BACKLOG
+════════════════════════════════════════ */
+function renderBacklog() {
+  const q   = (document.getElementById('bl-search').value||'').toLowerCase();
+  let all   = allCards();
+  if (blFilter !== 'all') all = all.filter(c => c.col === blFilter);
+  if (q) all = all.filter(c =>
+    c.title.toLowerCase().includes(q) ||
+    c.owner.toLowerCase().includes(q) ||
+    c.tag.toLowerCase().includes(q));
+  const list = document.getElementById('bl-list'); list.innerHTML = '';
+  if (!all.length) {
+    list.innerHTML = '<div style="font-size:12px;color:var(--text3);padding:16px 0;text-align:center;">Nenhum projeto encontrado.</div>';
+    return;
+  }
+  all.forEach(card => {
+    const prog     = cardProgress(card);
+    const di       = dueInfo(card.due);
+    const isExp    = expandedBlRows.has(card.id);
+    const colLabel = COLS.find(c => c.id === card.col)?.label || card.col;
+    const row      = document.createElement('div'); row.className = 'bl-row';
+    const storiesHtml = (card.stories||[]).map(story => {
+      const stDone = (story.subtasks||[]).filter(s => s.done).length;
+      return `<div class="bl-story-row"><span class="type-badge type-story">História</span><span class="bl-story-title">${escH(story.title)}</span><span class="bl-story-prog">${stDone}/${(story.subtasks||[]).length}</span></div>`;
+    }).join('');
+    row.innerHTML = `
+      <div class="bl-row-head" onclick="toggleBlRow('${card.id}')">
         <span class="bl-row-icon${isExp?' open':''}">▶</span>
         <div class="bl-name">
           <div class="bl-name-title"><span class="type-badge ${typeCls(card.type)}">${typeLbl(card.type)}</span> ${escH(card.title)}</div>
-          <div class="bl-name-meta">${escH(card.owner)} · ${escH(card.tag)} · <span class="due ${di.cls}">${di.label}</span> · <span style="color:var(--text2);">${colLabel}</span>${prog.total>0?` · ${prog.pct}% concluído`:''}</div>
+          <div class="bl-name-meta">${escH(card.owner)} · ${escH(card.tag)} · <span class="due ${di.cls}">${di.label}</span> · ${colLabel}${prog.total>0?' · '+prog.pct+'% concluído':''}</div>
         </div>
-        <div class="bl-actions">
-          <button class="btn" style="font-size:11px;padding:4px 10px;" onclick="openEdit(${card.id});event.stopPropagation();">Editar</button>
+        <div style="display:flex;gap:6px;flex-shrink:0;">
+          <button class="btn" style="font-size:11px;padding:4px 10px;" onclick="openEdit('${card.id}');event.stopPropagation();">Editar</button>
         </div>
       </div>
       <div class="bl-detail${isExp?' open':''}">
         ${card.notes?`<div style="font-size:11px;color:var(--text2);margin-bottom:8px;font-style:italic;">${escH(card.notes)}</div>`:''}
-        ${prog.total>0?`<div style="margin-bottom:8px;"><div class="prog-label" style="display:flex;justify-content:space-between;font-size:10px;color:var(--text2);margin-bottom:3px;"><span>${prog.done}/${prog.total} subtarefas concluídas</span><span>${prog.pct}%</span></div><div class="prog-bar"><div class="prog-fill${prog.pct===100?' full':''}" style="width:${prog.pct}%"></div></div></div>`:''}
-        ${card.stories.length>0?`<div class="bl-stories">${storiesHtml}</div>`:'<div style="font-size:11px;color:var(--text3);">Sem histórias cadastradas.</div>'}
+        ${prog.total>0?`<div style="margin-bottom:8px;"><div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text2);margin-bottom:3px;"><span>${prog.done}/${prog.total} subtarefas</span><span>${prog.pct}%</span></div><div class="prog-bar"><div class="prog-fill${prog.pct===100?' full':''}" style="width:${prog.pct}%"></div></div></div>`:''}
+        ${card.stories&&card.stories.length?`<div>${storiesHtml}</div>`:'<div style="font-size:11px;color:var(--text3);">Sem histórias cadastradas.</div>'}
       </div>`;
     list.appendChild(row);
   });
 }
 
-function toggleBlRow(id){if(expandedBlRows.has(id))expandedBlRows.delete(id);else expandedBlRows.add(id);renderBacklog();}
-function setFilter(f,btn){
-  blFilter=f;
-  document.querySelectorAll('.bl-filters button').forEach(b=>b.classList.remove('on'));
+function toggleBlRow(id) {
+  if (expandedBlRows.has(id)) expandedBlRows.delete(id); else expandedBlRows.add(id);
+  renderBacklog();
+}
+function setFilter(f, btn) {
+  blFilter = f;
+  document.querySelectorAll('.bl-filters button').forEach(b => b.classList.remove('on'));
   btn.classList.add('on');
   renderBacklog();
 }
 
-/* ── DASHBOARD ── */
-function renderDash(){
-  const all=allCards();
-  const activeCount=Object.keys(data).filter(k=>k!=='done').reduce((a,k)=>a+(data[k]||[]).length,0);
-  const overdue=all.filter(c=>{const d=new Date(c.due+'T00:00:00');return d<TODAY&&c.col!=='done';}).length;
-  const highR=all.filter(c=>c.risk==='high').length;
-  const done=(data.done||[]).length;
-  let totalSubs=0,doneSubs=0;
-  all.forEach(c=>{const p=cardProgress(c);totalSubs+=p.total;doneSubs+=p.done;});
-  const globalPct=totalSubs===0?0:Math.round(doneSubs/totalSubs*100);
+/* ════════════════════════════════════════
+   DASHBOARD
+════════════════════════════════════════ */
+function renderDash() {
+  const all         = allCards();
+  const activeCount = Object.keys(projectData).filter(k=>k!=='done').reduce((a,k)=>a+(projectData[k]||[]).length,0);
+  const overdue     = all.filter(c=>{ const d=new Date(c.due+'T00:00:00'); return d<TODAY&&c.col!=='done'; }).length;
+  const highR       = all.filter(c=>c.risk==='high').length;
+  const done        = (projectData.done||[]).length;
+  let totalSubs=0, doneSubs=0;
+  all.forEach(c=>{ const p=cardProgress(c); totalSubs+=p.total; doneSubs+=p.done; });
+  const globalPct = totalSubs===0?0:Math.round(doneSubs/totalSubs*100);
 
   document.getElementById('metrics').innerHTML=`
-    <div class="metric"><div class="metric-label">Total de projetos</div><div class="metric-val">${all.length}</div><div class="metric-sub">${done} concluídos</div></div>
+    <div class="metric"><div class="metric-label">Total</div><div class="metric-val">${all.length}</div><div class="metric-sub">${done} concluídos</div></div>
     <div class="metric"><div class="metric-label">Ativos</div><div class="metric-val">${activeCount}</div><div class="metric-sub">em andamento ou fila</div></div>
     <div class="metric"><div class="metric-label">Risco alto</div><div class="metric-val" style="${highR>0?'color:var(--red);':''}">${highR}</div><div class="metric-sub">projetos críticos</div></div>
-    <div class="metric"><div class="metric-label">Progresso global</div><div class="metric-val" style="${globalPct===100?'color:var(--green-l);':''}">${globalPct}%</div><div class="metric-sub">${doneSubs}/${totalSubs} subtarefas</div></div>`;
+    <div class="metric"><div class="metric-label">Progresso global</div><div class="metric-val">${globalPct}%</div><div class="metric-sub">${doneSubs}/${totalSubs} subtarefas</div></div>`;
 
-  /* Progress table */
-  const sorted=[...all].filter(c=>cardProgress(c).total>0).sort((a,b)=>cardProgress(b).pct-cardProgress(a).pct);
-  let tableHtml='<table class="prog-table"><thead><tr><th>Projeto</th><th>Tipo</th><th>Progresso</th><th style="text-align:right;">%</th></tr></thead><tbody>';
-  if(sorted.length===0){tableHtml+='<tr><td colspan="4" style="text-align:center;color:var(--text3);padding:16px;">Nenhum projeto com subtarefas cadastradas.</td></tr>';}
-  sorted.forEach(card=>{
-    const p=cardProgress(card);
-    tableHtml+=`<tr>
-      <td>${escH(card.title)}</td>
-      <td><span class="type-badge ${typeCls(card.type)}">${typeLbl(card.type)}</span></td>
-      <td><div class="mini-bar"><div class="mini-fill${p.pct===100?' full':''}" style="width:${p.pct}%"></div></div></td>
-      <td class="pct-txt">${p.pct}%</td>
-    </tr>`;
+  const sorted = [...all].filter(c=>cardProgress(c).total>0).sort((a,b)=>cardProgress(b).pct-cardProgress(a).pct);
+  let tbl = '<table class="prog-table"><thead><tr><th>Projeto</th><th>Tipo</th><th>Progresso</th><th style="text-align:right;">%</th></tr></thead><tbody>';
+  if (!sorted.length) tbl += '<tr><td colspan="4" style="text-align:center;color:var(--text3);padding:16px;">Nenhum projeto com subtarefas.</td></tr>';
+  sorted.forEach(card => {
+    const p = cardProgress(card);
+    tbl += `<tr><td>${escH(card.title)}</td><td><span class="type-badge ${typeCls(card.type)}">${typeLbl(card.type)}</span></td><td><div class="mini-bar"><div class="mini-fill${p.pct===100?' full':''}" style="width:${p.pct}%"></div></div></td><td class="pct-txt">${p.pct}%</td></tr>`;
   });
-  tableHtml+='</tbody></table>';
-  document.getElementById('prog-table-wrap').innerHTML=tableHtml;
+  tbl += '</tbody></table>';
+  document.getElementById('prog-table-wrap').innerHTML = tbl;
 
-  const isDark=window.matchMedia('(prefers-color-scheme:dark)').matches;
-  const gridColor=isDark?'rgba(255,255,255,0.07)':'rgba(0,0,0,0.06)';
-  const tickColor=isDark?'#aaa':'#666';
-
-  const statusCounts=[data.backlog.length,data.doing.length,data.review.length,data.done.length];
-  const statusColors=['#888780','#378ADD','#EF9F27','#639922'];
-  const statusLabels=['Backlog','Em andamento','Em revisão','Concluído'];
-  document.getElementById('leg-status').innerHTML=statusLabels.map((l,i)=>`<span class="legend-item"><span class="legend-sq" style="background:${statusColors[i]};"></span>${l} (${statusCounts[i]})</span>`).join('');
-
-  const riskCounts=[all.filter(c=>c.risk==='low').length,all.filter(c=>c.risk==='mid').length,all.filter(c=>c.risk==='high').length];
-  const riskColors=['#639922','#EF9F27','#E24B4A'];
-  document.getElementById('leg-risk').innerHTML=[['Baixo',0],['Médio',1],['Alto',2]].map(([l,i])=>`<span class="legend-item"><span class="legend-sq" style="background:${riskColors[i]};"></span>${l} (${riskCounts[i]})</span>`).join('');
-
+  const isDark   = window.matchMedia('(prefers-color-scheme:dark)').matches;
+  const gridC    = isDark?'rgba(255,255,255,0.07)':'rgba(0,0,0,0.06)';
+  const tickC    = isDark?'#aaa':'#666';
+  const sCounts  = [projectData.backlog.length,projectData.doing.length,projectData.review.length,projectData.done.length];
+  const sColors  = ['#888780','#378ADD','#EF9F27','#639922'];
+  const sLabels  = ['Backlog','Em andamento','Em revisão','Concluído'];
+  document.getElementById('leg-status').innerHTML = sLabels.map((l,i)=>`<span class="legend-item"><span class="legend-sq" style="background:${sColors[i]};"></span>${l} (${sCounts[i]})</span>`).join('');
+  const rCounts  = [all.filter(c=>c.risk==='low').length,all.filter(c=>c.risk==='mid').length,all.filter(c=>c.risk==='high').length];
+  const rColors  = ['#639922','#EF9F27','#E24B4A'];
+  document.getElementById('leg-risk').innerHTML = [['Baixo',0],['Médio',1],['Alto',2]].map(([l,i])=>`<span class="legend-item"><span class="legend-sq" style="background:${rColors[i]};"></span>${l} (${rCounts[i]})</span>`).join('');
   const tagMap={};all.forEach(c=>{tagMap[c.tag]=(tagMap[c.tag]||0)+1;});
-  const tagKeys=Object.keys(tagMap),tagVals=tagKeys.map(k=>tagMap[k]);
-  const areaColors=['#534AB7','#1D9E75','#D85A30','#378ADD','#639922','#BA7517','#D4537E','#888780'];
-  document.getElementById('leg-area').innerHTML=tagKeys.map((l,i)=>`<span class="legend-item"><span class="legend-sq" style="background:${areaColors[i%areaColors.length]};"></span>${l} (${tagVals[i]})</span>`).join('');
+  const tKeys=Object.keys(tagMap), tVals=tKeys.map(k=>tagMap[k]);
+  const aColors=['#534AB7','#1D9E75','#D85A30','#378ADD','#639922','#BA7517','#D4537E','#888780'];
+  document.getElementById('leg-area').innerHTML = tKeys.map((l,i)=>`<span class="legend-item"><span class="legend-sq" style="background:${aColors[i%aColors.length]};"></span>${l} (${tVals[i]})</span>`).join('');
+  const wC=[0,0,0,0];
+  all.forEach(c=>{
+    const d=new Date(c.due+'T00:00:00'), diff=Math.round((d-TODAY)/86400000);
+    if(diff>=0&&diff<7)wC[0]++;else if(diff>=7&&diff<14)wC[1]++;else if(diff>=14&&diff<21)wC[2]++;else if(diff>=21&&diff<30)wC[3]++;
+  });
+  document.getElementById('leg-due').innerHTML = `<span class="legend-item"><span class="legend-sq" style="background:#534AB7;"></span>entregas / semana</span>`;
 
-  const wCounts=[0,0,0,0];
-  all.forEach(c=>{const d=new Date(c.due+'T00:00:00');const diff=Math.round((d-TODAY)/86400000);
-    if(diff>=0&&diff<7)wCounts[0]++;else if(diff>=7&&diff<14)wCounts[1]++;else if(diff>=14&&diff<21)wCounts[2]++;else if(diff>=21&&diff<30)wCounts[3]++;});
-  document.getElementById('leg-due').innerHTML=`<span class="legend-item"><span class="legend-sq" style="background:#534AB7;"></span>entregas / semana</span>`;
-
-  if(charts.status)charts.status.destroy();
-  if(charts.risk)charts.risk.destroy();
-  if(charts.area)charts.area.destroy();
-  if(charts.due)charts.due.destroy();
-
-  charts.status=new Chart(document.getElementById('chart-status'),{type:'doughnut',data:{labels:statusLabels,datasets:[{data:statusCounts,backgroundColor:statusColors,borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,cutout:'62%',plugins:{legend:{display:false}}}});
-  charts.risk=new Chart(document.getElementById('chart-risk'),{type:'bar',data:{labels:['Baixo','Médio','Alto'],datasets:[{data:riskCounts,backgroundColor:riskColors,borderRadius:4,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{color:tickColor,font:{size:11}}},y:{grid:{color:gridColor},ticks:{stepSize:1,color:tickColor,font:{size:11}}}}}});
-  charts.area=new Chart(document.getElementById('chart-area'),{type:'bar',data:{labels:tagKeys,datasets:[{data:tagVals,backgroundColor:tagKeys.map((_,i)=>areaColors[i%areaColors.length]),borderRadius:4,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{color:tickColor,font:{size:10},maxRotation:30,autoSkip:false}},y:{grid:{color:gridColor},ticks:{stepSize:1,color:tickColor,font:{size:11}}}}}});
-  charts.due=new Chart(document.getElementById('chart-due'),{type:'bar',data:{labels:['Sem 1','Sem 2','Sem 3','Sem 4'],datasets:[{data:wCounts,backgroundColor:'#534AB7',borderRadius:4,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{color:tickColor,font:{size:11}}},y:{grid:{color:gridColor},ticks:{stepSize:1,color:tickColor,font:{size:11}}}}}});
+  ['status','risk','area','due'].forEach(k=>{ if(charts[k]) charts[k].destroy(); });
+  charts.status = new Chart(document.getElementById('chart-status'),{type:'doughnut',data:{labels:sLabels,datasets:[{data:sCounts,backgroundColor:sColors,borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,cutout:'62%',plugins:{legend:{display:false}}}});
+  charts.risk   = new Chart(document.getElementById('chart-risk'),{type:'bar',data:{labels:['Baixo','Médio','Alto'],datasets:[{data:rCounts,backgroundColor:rColors,borderRadius:4,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{color:tickC,font:{size:11}}},y:{grid:{color:gridC},ticks:{stepSize:1,color:tickC,font:{size:11}}}}}});
+  charts.area   = new Chart(document.getElementById('chart-area'),{type:'bar',data:{labels:tKeys,datasets:[{data:tVals,backgroundColor:tKeys.map((_,i)=>aColors[i%aColors.length]),borderRadius:4,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{color:tickC,font:{size:10},maxRotation:30,autoSkip:false}},y:{grid:{color:gridC},ticks:{stepSize:1,color:tickC,font:{size:11}}}}}});
+  charts.due    = new Chart(document.getElementById('chart-due'),{type:'bar',data:{labels:['Sem 1','Sem 2','Sem 3','Sem 4'],datasets:[{data:wC,backgroundColor:'#534AB7',borderRadius:4,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{color:tickC,font:{size:11}}},y:{grid:{color:gridC},ticks:{stepSize:1,color:tickC,font:{size:11}}}}}});
 }
 
-/* ── MODAL STORIES EDITOR ── */
-let modalStories=[];
-
-function renderModalStories(){
-  const wrap=document.getElementById('m-stories');wrap.innerHTML='';
-  modalStories.forEach((story,si)=>{
-    const div=document.createElement('div');div.className='m-story-item';
-    let subsHtml='';
-    story.subtasks.forEach((sub,ti)=>{
-      subsHtml+=`<div class="m-subtask-row">
+/* ════════════════════════════════════════
+   MODAL — STORIES EDITOR
+════════════════════════════════════════ */
+function renderModalStories() {
+  const wrap = document.getElementById('m-stories'); wrap.innerHTML = '';
+  modalStories.forEach((story, si) => {
+    const div = document.createElement('div'); div.className = 'm-story-item';
+    const subsHtml = story.subtasks.map((sub, ti) =>
+      `<div class="m-subtask-row">
         <input type="text" value="${escH(sub.title)}" placeholder="Subtarefa..." oninput="modalStories[${si}].subtasks[${ti}].title=this.value"/>
-        <input class="sub-assignee-inp" type="text" value="${escH(sub.assignee)}" placeholder="Resp." oninput="modalStories[${si}].subtasks[${ti}].assignee=this.value"/>
-        <button class="btn" style="font-size:11px;padding:2px 7px;" onclick="removeModalSub(${si},${ti})">✕</button>
-      </div>`;
-    });
-    div.innerHTML=`
+        <input class="sub-ai" type="text" value="${escH(sub.assignee)}" placeholder="Resp." oninput="modalStories[${si}].subtasks[${ti}].assignee=this.value"/>
+        <button class="btn" style="font-size:11px;padding:2px 7px;" onclick="rmSub(${si},${ti})">✕</button>
+      </div>`).join('');
+    div.innerHTML = `
       <div class="m-story-head">
-        <input type="text" value="${escH(story.title)}" placeholder="Nome da história..." oninput="modalStories[${si}].title=this.value" style="flex:1;"/>
-        <button class="btn btn-danger" style="font-size:11px;padding:4px 8px;" onclick="removeModalStory(${si})">Remover</button>
+        <input type="text" value="${escH(story.title)}" placeholder="Nome da história..." oninput="modalStories[${si}].title=this.value"/>
+        <button class="btn btn-danger" style="font-size:11px;padding:4px 8px;" onclick="rmStory(${si})">Remover</button>
       </div>
-      <div class="m-subtasks" id="msubs-${si}">${subsHtml}</div>
-      <button class="add-link" onclick="addModalSub(${si})">+ subtarefa</button>`;
+      <div class="m-subtasks">${subsHtml}</div>
+      <button class="add-link" onclick="addSub(${si})">+ subtarefa</button>`;
     wrap.appendChild(div);
   });
 }
+function addStory()   { modalStories.push({id:uid(),title:'',subtasks:[]}); renderModalStories(); }
+function rmStory(si)  { modalStories.splice(si,1); renderModalStories(); }
+function addSub(si)   { modalStories[si].subtasks.push({id:uid(),title:'',assignee:'',done:false}); renderModalStories(); }
+function rmSub(si,ti) { modalStories[si].subtasks.splice(ti,1); renderModalStories(); }
 
-function addStory(){
-  modalStories.push({id:nextStoryId++,title:'',subtasks:[]});
+/* ════════════════════════════════════════
+   MODAL OPEN / SAVE / DELETE
+   FIX PRINCIPAL: openEdit agora lê direto do card,
+   sem tentar acessar .data que não existe
+════════════════════════════════════════ */
+function openEdit(id) {
+  const r = findCard(id);
+  if (!r) { toast('Card não encontrado', true); return; }
+  const c = r.card;   // ← FIX: era "r.card.data || r.card", agora é só r.card
+  isNew = false; editId = id;
+  document.getElementById('modal-title').textContent = 'Editar projeto';
+  document.getElementById('e-type').value  = c.type  || 'task';
+  document.getElementById('e-col').value   = r.col;
+  document.getElementById('e-name').value  = c.title || '';
+  document.getElementById('e-owner').value = c.owner || '';
+  document.getElementById('e-tag').value   = c.tag   || '';
+  document.getElementById('e-due').value   = c.due   || '';
+  document.getElementById('e-risk').value  = c.risk  || 'low';
+  document.getElementById('e-notes').value = c.notes || '';
+  modalStories = JSON.parse(JSON.stringify(c.stories || []));
   renderModalStories();
-}
-function removeModalStory(si){modalStories.splice(si,1);renderModalStories();}
-function addModalSub(si){modalStories[si].subtasks.push({id:nextSubId++,title:'',assignee:'',done:false});renderModalStories();}
-function removeModalSub(si,ti){modalStories[si].subtasks.splice(ti,1);renderModalStories();}
-
-/* ── MODAL OPEN/CLOSE ── */
-function openEdit(id){
-  const r=findCard(id);if(!r)return;
-  const c=r.card;
-  isNew=false;editId=id;
-  document.getElementById('modal-title').textContent='Editar projeto';
-  document.getElementById('e-type').value=c.type;
-  document.getElementById('e-col').value=r.col;
-  document.getElementById('e-name').value=c.title;
-  document.getElementById('e-owner').value=c.owner;
-  document.getElementById('e-tag').value=c.tag;
-  document.getElementById('e-due').value=c.due;
-  document.getElementById('e-risk').value=c.risk;
-  document.getElementById('e-notes').value=c.notes||'';
-  modalStories=JSON.parse(JSON.stringify(c.stories||[]));
-  renderModalStories();
-  document.getElementById('btn-del').style.display='';
+  document.getElementById('btn-del').style.display = '';
   document.getElementById('overlay').classList.add('open');
 }
-function openNew(){
-  isNew=true;editId=null;
-  document.getElementById('modal-title').textContent='Novo projeto';
-  document.getElementById('e-type').value='epic';
-  document.getElementById('e-col').value='backlog';
-  document.getElementById('e-name').value='';
-  document.getElementById('e-owner').value='';
-  document.getElementById('e-tag').value='';
-  const d=new Date();d.setDate(d.getDate()+30);
-  document.getElementById('e-due').value=d.toISOString().split('T')[0];
-  document.getElementById('e-risk').value='low';
-  document.getElementById('e-notes').value='';
-  modalStories=[];
-  renderModalStories();
-  document.getElementById('btn-del').style.display='none';
-  document.getElementById('overlay').classList.add('open');
-  setTimeout(()=>document.getElementById('e-name').focus(),80);
-}
-function closeModal(){document.getElementById('overlay').classList.remove('open');}
-function overlayClickOuter(e){if(e.target===document.getElementById('overlay'))closeModal();}
 
-function saveCard(){
-  const name=document.getElementById('e-name').value.trim();
-  if(!name){document.getElementById('e-name').focus();return;}
-  const newCol=document.getElementById('e-col').value;
-  const obj={
-    title:name,type:document.getElementById('e-type').value,
-    owner:document.getElementById('e-owner').value.trim()||'—',
-    tag:document.getElementById('e-tag').value.trim()||'Geral',
-    due:document.getElementById('e-due').value||new Date().toISOString().split('T')[0],
-    risk:document.getElementById('e-risk').value,
-    notes:document.getElementById('e-notes').value,
-    stories:JSON.parse(JSON.stringify(modalStories)),
+function openNew() {
+  isNew = true; editId = null;
+  document.getElementById('modal-title').textContent = 'Novo projeto';
+  document.getElementById('e-type').value  = 'epic';
+  document.getElementById('e-col').value   = 'backlog';
+  document.getElementById('e-name').value  = '';
+  document.getElementById('e-owner').value = '';
+  document.getElementById('e-tag').value   = '';
+  const d = new Date(); d.setDate(d.getDate()+30);
+  document.getElementById('e-due').value   = d.toISOString().split('T')[0];
+  document.getElementById('e-risk').value  = 'low';
+  document.getElementById('e-notes').value = '';
+  modalStories = [];
+  renderModalStories();
+  document.getElementById('btn-del').style.display = 'none';
+  document.getElementById('overlay').classList.add('open');
+  setTimeout(()=>document.getElementById('e-name').focus(), 80);
+}
+
+function closeModal() { document.getElementById('overlay').classList.remove('open'); }
+function overlayClickOuter(e) { if (e.target === document.getElementById('overlay')) closeModal(); }
+
+async function saveCard() {
+  const name = document.getElementById('e-name').value.trim();
+  if (!name) { document.getElementById('e-name').focus(); return; }
+  const newCol = document.getElementById('e-col').value;
+  const btn    = document.getElementById('btn-save');
+  btn.disabled = true; btn.textContent = 'Salvando...';
+
+  const obj = {
+    title:   name,
+    type:    document.getElementById('e-type').value,
+    owner:   document.getElementById('e-owner').value.trim() || '—',
+    tag:     document.getElementById('e-tag').value.trim()   || 'Geral',
+    due:     document.getElementById('e-due').value          || new Date().toISOString().split('T')[0],
+    risk:    document.getElementById('e-risk').value,
+    notes:   document.getElementById('e-notes').value,
+    col:     newCol,
+    stories: JSON.parse(JSON.stringify(modalStories)),
   };
-  if(isNew){
-    obj.id=nextId++;obj.col=newCol;
-    data[newCol].push(obj);
-    toast('Projeto criado');
+
+  if (isNew) {
+    obj.id = uid();
+    projectData[newCol].push(obj);
+    renderAll();
+    const ok = await upsertCard(obj);
+    if (ok) toast('Projeto criado');
   } else {
-    const r=findCard(editId);if(!r)return;
-    Object.assign(r.card,obj);
-    if(r.col!==newCol){
-      const idx=data[r.col].findIndex(x=>x.id===editId);
-      const[moved]=data[r.col].splice(idx,1);
-      data[newCol].push(moved);
+    const r = findCard(editId);
+    if (!r) { btn.disabled=false; btn.textContent='Salvar'; return; }
+    const prevCol = r.col;
+    Object.assign(r.card, obj);
+    if (prevCol !== newCol) {
+      const idx = projectData[prevCol].findIndex(x => x.id == editId);
+      const [moved] = projectData[prevCol].splice(idx, 1);
+      projectData[newCol].push(moved);
     }
-    toast('Projeto salvo');
+    renderAll();
+    const ok = await upsertCard(r.card);
+    if (ok) toast('Projeto salvo');
   }
-  closeModal();saveData();renderAll();
+  btn.disabled = false; btn.textContent = 'Salvar';
+  closeModal();
 }
 
-function deleteCard(){
-  if(!editId)return;
-  if(!confirm('Excluir este projeto e todas as suas histórias/subtarefas?'))return;
-  const r=findCard(editId);if(!r)return;
-  data[r.col].splice(data[r.col].findIndex(c=>c.id===editId),1);
+async function deleteCard() {
+  if (!editId) return;
+  if (!confirm('Excluir este projeto e todas as suas histórias/subtarefas?')) return;
+  const r = findCard(editId); if (!r) return;
+  const card = r.card;
+  projectData[r.col].splice(projectData[r.col].findIndex(c => c.id == editId), 1);
   expandedCards.delete(editId);
-  closeModal();saveData();renderAll();toast('Projeto excluído');
+  closeModal(); renderAll();
+  const ok = await removeCard(card);
+  if (ok) toast('Projeto excluído');
 }
 
-/* ── EXPORT/IMPORT ── */
-function exportData(){
-  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');a.href=url;
-  a.download='projetos_'+new Date().toISOString().split('T')[0]+'.json';
-  a.click();URL.revokeObjectURL(url);toast('Exportado com sucesso');
+/* ════════════════════════════════════════
+   EXPORT / IMPORT
+════════════════════════════════════════ */
+function exportData() {
+  const blob = new Blob([JSON.stringify(projectData,null,2)],{type:'application/json'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a'); a.href=url;
+  a.download = 'projetos_'+new Date().toISOString().split('T')[0]+'.json';
+  a.click(); URL.revokeObjectURL(url); toast('Exportado');
 }
-function importData(event){
-  const file=event.target.files[0];if(!file)return;
-  const reader=new FileReader();
-  reader.onload=e=>{
-    try{
-      const imp=JSON.parse(e.target.result);
-      if(imp.backlog&&imp.doing&&imp.review&&imp.done){
-        data=imp;bumpIds();saveData();renderAll();toast('Dados importados');
-      } else {alert('Arquivo inválido.');}
-    }catch(err){alert('Erro ao ler JSON.');}
+async function importData(event) {
+  const file = event.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async e => {
+    try {
+      const imp = JSON.parse(e.target.result);
+      if (imp.backlog && imp.doing && imp.review && imp.done) {
+        const all = Object.values(imp).flat();
+        for (const card of all) { await upsertCard(card); }
+        await loadData(); renderAll(); toast('Dados importados');
+      } else { alert('Arquivo inválido.'); }
+    } catch { alert('Erro ao ler JSON.'); }
   };
-  reader.readAsText(file);event.target.value='';
+  reader.readAsText(file); event.target.value='';
 }
 
-/* ── TABS / RENDER ── */
-function switchTab(t,btn){
-  activeTab=t;
+/* ════════════════════════════════════════
+   TABS / RENDER
+════════════════════════════════════════ */
+function switchTab(t, btn) {
+  activeTab = t;
   document.querySelectorAll('.tab').forEach(el=>el.classList.remove('active'));
-  if(btn)btn.classList.add('active');
+  if(btn) btn.classList.add('active');
   document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
   document.getElementById('view-'+t).classList.add('active');
-  if(t==='dash')renderDash();
-  if(t==='backlog')renderBacklog();
+  if (t==='dash')    renderDash();
+  if (t==='backlog') renderBacklog();
 }
-function renderAll(){
+function renderAll() {
   renderKanban();
-  if(activeTab==='backlog')renderBacklog();
-  if(activeTab==='dash')renderDash();
+  if (activeTab==='backlog') renderBacklog();
+  if (activeTab==='dash')    renderDash();
 }
-function toast(msg){
-  const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');
-  setTimeout(()=>el.classList.remove('show'),2200);
+function toast(msg, isErr=false) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show' + (isErr?' error':'');
+  setTimeout(()=>el.classList.remove('show'), 2400);
 }
-document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
-renderAll();
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeModal(); });
+
+boot();
 </script>
 </body>
 </html>
